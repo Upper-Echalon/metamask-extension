@@ -3,12 +3,13 @@ import {
   formatMenuItemDate,
   getLeadingZeroCount,
   getRandomKey,
+  getUsdAmount,
 } from './notification.util';
 
 describe('formatMenuItemDate', () => {
   beforeAll(() => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date('2024-06-07T09:40:00Z'));
+    jest.setSystemTime(new Date(Date.UTC(2024, 5, 7, 9, 40, 0))); // 2024-06-07T09:40:00Z
   });
 
   afterAll(() => {
@@ -27,7 +28,7 @@ describe('formatMenuItemDate', () => {
 
     // assert 1 hour ago
     assertToday((testDate) => {
-      testDate.setHours(testDate.getHours() - 1);
+      testDate.setUTCHours(testDate.getUTCHours() - 1);
       return testDate;
     });
   });
@@ -41,14 +42,14 @@ describe('formatMenuItemDate', () => {
 
     // assert exactly 1 day ago
     assertYesterday((testDate) => {
-      testDate.setDate(testDate.getDate() - 1);
+      testDate.setUTCDate(testDate.getUTCDate() - 1);
     });
 
     // assert almost a day ago, but was still yesterday
     // E.g. if Today way 09:40AM, but date to test was 23 hours ago (yesterday at 10:40AM), we still want to to show yesterday
     assertYesterday((testDate) => {
-      testDate.setDate(testDate.getDate() - 1);
-      testDate.setHours(testDate.getHours() + 1);
+      testDate.setUTCDate(testDate.getUTCDate() - 1);
+      testDate.setUTCHours(testDate.getUTCHours() + 1);
     });
   });
 
@@ -61,18 +62,18 @@ describe('formatMenuItemDate', () => {
 
     // assert exactly 1 month ago
     assertMonthsAgo((testDate) => {
-      testDate.setMonth(testDate.getMonth() - 1);
+      testDate.setUTCMonth(testDate.getUTCMonth() - 1);
     });
 
     // assert 2 months ago
     assertMonthsAgo((testDate) => {
-      testDate.setMonth(testDate.getMonth() - 2);
+      testDate.setUTCMonth(testDate.getUTCMonth() - 2);
     });
 
     // assert almost a month ago (where it is a new month, but not 30 days)
     assertMonthsAgo(() => {
       // jest mock date is set in july, so we will test with month may
-      return new Date('2024-05-20T09:40:00Z');
+      return new Date(Date.UTC(2024, 4, 20, 9, 40, 0)); // 2024-05-20T09:40:00Z
     });
   });
 
@@ -85,18 +86,18 @@ describe('formatMenuItemDate', () => {
 
     // assert exactly 1 year ago
     assertYearsAgo((testDate) => {
-      testDate.setFullYear(testDate.getFullYear() - 1);
+      testDate.setUTCFullYear(testDate.getUTCFullYear() - 1);
     });
 
     // assert 2 years ago
     assertYearsAgo((testDate) => {
-      testDate.setFullYear(testDate.getFullYear() - 2);
+      testDate.setUTCFullYear(testDate.getUTCFullYear() - 2);
     });
 
     // assert almost a year ago (where it is a new year, but not 365 days ago)
     assertYearsAgo(() => {
       // jest mock date is set in 2024, so we will test with year 2023
-      return new Date('2023-11-20T09:40:00Z');
+      return new Date(Date.UTC(2023, 10, 20, 9, 40, 0)); // 2023-11-20T09:40:00Z
     });
   });
 });
@@ -180,5 +181,40 @@ describe('getRandomKey', () => {
     const index = 1;
     const result = getRandomKey(text, index);
     expect(result).toContain('testtext');
+  });
+});
+
+describe('getUsdAmount', () => {
+  it('should return formatted USD amount based on token amount, decimals, and USD rate', () => {
+    const amount = '1000000000000000000'; // 1 Ether (1e18 wei)
+    const decimals = '18';
+    const usdRate = '2000'; // 1 Ether = $2000
+
+    const result = getUsdAmount(amount, decimals, usdRate);
+    expect(result).toBe('2K'); // Since 1 Ether * $2000 = $2000, formatted as '2K'
+  });
+
+  it('should return an empty string if any of the parameters are missing', () => {
+    expect(getUsdAmount('', '18', '2000')).toBe('');
+    expect(getUsdAmount('1000000000000000000', '', '2000')).toBe('');
+    expect(getUsdAmount('1000000000000000000', '18', '')).toBe('');
+  });
+
+  it('should handle small amounts correctly', () => {
+    const amount = '1000000000000000'; // 0.001 Ether (1e15 wei)
+    const decimals = '18';
+    const usdRate = '1500'; // 1 Ether = $1500
+
+    const result = getUsdAmount(amount, decimals, usdRate);
+    expect(result).toBe('1.5'); // Since 0.001 Ether * $1500 = $1.5
+  });
+
+  it('should handle large amounts correctly', () => {
+    const amount = '5000000000000000000000'; // 5000 Ether
+    const decimals = '18';
+    const usdRate = '1000'; // 1 Ether = $1000
+
+    const result = getUsdAmount(amount, decimals, usdRate);
+    expect(result).toBe('5M'); // Since 5000 Ether * $1000 = $5,000,000, formatted as '5M'
   });
 });

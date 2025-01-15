@@ -6,7 +6,7 @@ import Tooltip from '../../../../components/ui/tooltip';
 import { AmountPill } from './amount-pill';
 import {
   AssetIdentifier,
-  NATIVE_ASSET_IDENTIFIER,
+  NativeAssetIdentifier,
   TokenAssetIdentifier,
 } from './types';
 
@@ -24,17 +24,28 @@ jest.mock('../../../../components/ui/tooltip', () => ({
 }));
 
 const TOKEN_ID_MOCK = '0xabc';
+const CHAIN_ID_MOCK = '0x1';
+
+const NATIVE_ASSET_MOCK: NativeAssetIdentifier = {
+  chainId: CHAIN_ID_MOCK,
+  standard: TokenStandard.none,
+};
 
 const ERC20_ASSET_MOCK: TokenAssetIdentifier = {
+  chainId: CHAIN_ID_MOCK,
   standard: TokenStandard.ERC20,
   address: '0x456',
 };
+
 const ERC721_ASSET_MOCK: TokenAssetIdentifier = {
+  chainId: CHAIN_ID_MOCK,
   standard: TokenStandard.ERC721,
   address: '0x123',
   tokenId: TOKEN_ID_MOCK,
 };
+
 const ERC1155_ASSET_MOCK: TokenAssetIdentifier = {
+  chainId: CHAIN_ID_MOCK,
   standard: TokenStandard.ERC1155,
   address: '0x789',
   tokenId: TOKEN_ID_MOCK,
@@ -114,7 +125,7 @@ describe('AmountPill', () => {
         amount: BigNumber;
         expected: { text: string; tooltip: string };
       }) => {
-        renderAndExpect(NATIVE_ASSET_IDENTIFIER, amount, expected);
+        renderAndExpect(NATIVE_ASSET_MOCK, amount, expected);
       },
     );
   });
@@ -204,6 +215,22 @@ describe('AmountPill', () => {
         expected: { text: string; tooltip: string };
       }) => {
         renderAndExpect(ERC1155_ASSET_MOCK, amount, expected);
+      },
+    );
+  });
+
+  it('renders shortened token id if given id is too long', () => {
+    const longHexadecimalTokenId = '0x11111111111111111111111111111';
+    const longTokenIdInDecimal = '5538449982437149470432529417834769';
+    renderAndExpect(
+      {
+        ...ERC721_ASSET_MOCK,
+        tokenId: longHexadecimalTokenId,
+      },
+      new BigNumber(1),
+      {
+        text: '+ #5538...4769',
+        tooltip: `#${longTokenIdInDecimal}`,
       },
     );
   });

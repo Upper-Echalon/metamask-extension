@@ -2,6 +2,7 @@ import React, { memo, useLayoutEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
 import { isEqual } from 'lodash';
+import { isEvmAccountType } from '@metamask/keyring-api';
 import { useI18nContext } from '../../../hooks/useI18nContext';
 import Identicon from '../identicon';
 import UserPreferencedCurrencyDisplay from '../../app/user-preferenced-currency-display';
@@ -47,16 +48,16 @@ const AccountList = ({
 
   const [firstSelectedAccount] = selectedAccounts;
 
-  const Header = () => {
-    let checked = false;
-    let isIndeterminate = false;
-    if (allAreSelected()) {
-      checked = true;
-    } else if (selectedAccounts.size === 0) {
-      checked = false;
-    } else {
-      isIndeterminate = true;
+  const handleEvmAccountClick = (account) => {
+    if (!isEvmAccountType(account.type)) {
+      return;
     }
+    handleAccountClick(account.address);
+  };
+
+  const Header = () => {
+    const checked = allAreSelected();
+    const isIndeterminate = !checked && selectedAccounts.size !== 0;
 
     return (
       <div
@@ -128,7 +129,8 @@ const AccountList = ({
                 display={Display.Flex}
                 width={BlockSize.Full}
                 key={`choose-account-list-${index}`}
-                onClick={() => handleAccountClick(address)}
+                data-testid={`choose-account-list-${index}`}
+                onClick={() => handleEvmAccountClick(account)}
                 className="choose-account-list__account"
                 ref={
                   isSelectedAccount && address === firstSelectedAccount
@@ -146,7 +148,10 @@ const AccountList = ({
                   width={BlockSize.Full}
                   alignItems={AlignItems.center}
                 >
-                  <Checkbox isChecked={isSelectedAccount} />
+                  <Checkbox
+                    isChecked={isSelectedAccount}
+                    isDisabled={!isEvmAccountType(account.type)}
+                  />
                   <Box marginLeft={2}>
                     <Identicon diameter={34} address={address} />
                   </Box>
@@ -175,6 +180,7 @@ const AccountList = ({
                       </Text>
                       <Box display={Display.Flex}>
                         <UserPreferencedCurrencyDisplay
+                          account={account}
                           type={PRIMARY}
                           value={balance}
                           style={{

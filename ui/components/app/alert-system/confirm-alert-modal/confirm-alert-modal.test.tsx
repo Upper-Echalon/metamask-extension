@@ -8,6 +8,14 @@ import {
   ConfirmAlertModal,
 } from './confirm-alert-modal';
 
+jest.mock('../contexts/alertMetricsContext', () => ({
+  useAlertMetrics: jest.fn(() => ({
+    trackInlineAlertClicked: jest.fn(),
+    trackAlertRender: jest.fn(),
+    trackAlertActionClicked: jest.fn(),
+  })),
+}));
+
 describe('ConfirmAlertModal', () => {
   const OWNER_ID_MOCK = '123';
   const FROM_ALERT_KEY_MOCK = 'from';
@@ -18,18 +26,18 @@ describe('ConfirmAlertModal', () => {
   const onSubmitMock = jest.fn();
   const alertsMock = [
     {
+      key: DATA_ALERT_KEY_MOCK,
+      field: DATA_ALERT_KEY_MOCK,
+      severity: Severity.Danger,
+      message: DATA_ALERT_MESSAGE_MOCK,
+    },
+    {
       key: FROM_ALERT_KEY_MOCK,
       field: FROM_ALERT_KEY_MOCK,
       severity: Severity.Warning,
       message: 'Alert 1',
       reason: 'Reason 1',
       alertDetails: ['Detail 1', 'Detail 2'],
-    },
-    {
-      key: DATA_ALERT_KEY_MOCK,
-      field: DATA_ALERT_KEY_MOCK,
-      severity: Severity.Danger,
-      message: DATA_ALERT_MESSAGE_MOCK,
     },
   ];
 
@@ -44,11 +52,11 @@ describe('ConfirmAlertModal', () => {
       },
     },
   };
+
   const mockStore = configureMockStore([])(STATE_MOCK);
 
   const defaultProps: ConfirmAlertModalProps = {
     ownerId: OWNER_ID_MOCK,
-    alertKey: FROM_ALERT_KEY_MOCK,
     onClose: onCloseMock,
     onCancel: onCancelMock,
     onSubmit: onSubmitMock,
@@ -60,12 +68,12 @@ describe('ConfirmAlertModal', () => {
       mockStore,
     );
 
-    expect(getByText('Your assets may be at risk')).toBeInTheDocument();
+    expect(getByText('This request is suspicious')).toBeInTheDocument();
   });
 
   it('disables submit button when confirm modal is not acknowledged', () => {
     const { getByTestId } = renderWithProvider(
-      <ConfirmAlertModal {...defaultProps} alertKey={DATA_ALERT_KEY_MOCK} />,
+      <ConfirmAlertModal {...defaultProps} />,
       mockStore,
     );
 
@@ -84,7 +92,7 @@ describe('ConfirmAlertModal', () => {
 
   it('calls onSubmit when the button is clicked', () => {
     const { getByTestId } = renderWithProvider(
-      <ConfirmAlertModal {...defaultProps} alertKey={DATA_ALERT_KEY_MOCK} />,
+      <ConfirmAlertModal {...defaultProps} />,
       mockStore,
     );
 
@@ -93,41 +101,37 @@ describe('ConfirmAlertModal', () => {
     expect(onSubmitMock).toHaveBeenCalledTimes(1);
   });
 
-  // todo: following 2 tests have been temporarily commented out
-  // we can un-comment as we add more alert providers
+  it('calls open multiple alert modal when review alerts link is clicked', () => {
+    const { getByTestId } = renderWithProvider(
+      <ConfirmAlertModal {...defaultProps} />,
+      mockStore,
+    );
 
-  // it('calls open multiple alert modal when review alerts link is clicked', () => {
-  //   const { getByTestId } = renderWithProvider(
-  //     <ConfirmAlertModal {...defaultProps} />,
-  //     mockStore,
-  //   );
+    fireEvent.click(getByTestId('confirm-alert-modal-review-all-alerts'));
+    expect(getByTestId('alert-modal-button')).toBeInTheDocument();
+  });
 
-  //   fireEvent.click(getByTestId('confirm-alert-modal-review-all-alerts'));
-  //   expect(getByTestId('alert-modal-button')).toBeInTheDocument();
-  // });
+  describe('when there are multiple alerts', () => {
+    it('renders the next alert when the "Got it" button is clicked', () => {
+      const mockStoreAcknowledgeAlerts = configureMockStore([])({
+        ...STATE_MOCK,
+        confirmAlerts: {
+          alerts: { [OWNER_ID_MOCK]: alertsMock },
+          confirmed: {
+            [OWNER_ID_MOCK]: {
+              [FROM_ALERT_KEY_MOCK]: true,
+              [DATA_ALERT_KEY_MOCK]: false,
+            },
+          },
+        },
+      });
+      const { getByTestId, getByText } = renderWithProvider(
+        <ConfirmAlertModal {...defaultProps} />,
+        mockStoreAcknowledgeAlerts,
+      );
+      fireEvent.click(getByTestId('alert-modal-button'));
 
-  // describe('when there are multiple alerts', () => {
-  //   it('renders the next alert when the "Got it" button is clicked', () => {
-  //     const mockStoreAcknowledgeAlerts = configureMockStore([])({
-  //       ...STATE_MOCK,
-  //       confirmAlerts: {
-  //         alerts: { [OWNER_ID_MOCK]: alertsMock },
-  //         confirmed: {
-  //           [OWNER_ID_MOCK]: {
-  //             [FROM_ALERT_KEY_MOCK]: true,
-  //             [DATA_ALERT_KEY_MOCK]: false,
-  //           },
-  //         },
-  //       },
-  //     });
-  //     const { getByTestId, getByText } = renderWithProvider(
-  //       <ConfirmAlertModal {...defaultProps} />,
-  //       mockStoreAcknowledgeAlerts,
-  //     );
-  //     fireEvent.click(getByTestId('confirm-alert-modal-review-all-alerts'));
-  //     fireEvent.click(getByTestId('alert-modal-button'));
-
-  //     expect(getByText(DATA_ALERT_MESSAGE_MOCK)).toBeInTheDocument();
-  //   });
-  // });
+      expect(getByText(DATA_ALERT_MESSAGE_MOCK)).toBeInTheDocument();
+    });
+  });
 });

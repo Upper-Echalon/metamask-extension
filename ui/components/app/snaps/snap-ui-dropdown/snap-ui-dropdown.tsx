@@ -29,12 +29,12 @@ export const SnapUIDropdown: FunctionComponent<SnapUIDropdownProps> = ({
 }) => {
   const { handleInputChange, getValue } = useSnapInterfaceContext();
 
-  const initialValue = getValue(name, form);
+  const initialValue = getValue(name, form) as string;
 
   const [value, setValue] = useState(initialValue ?? '');
 
   useEffect(() => {
-    if (initialValue) {
+    if (initialValue !== undefined && initialValue !== null) {
       setValue(initialValue);
     }
   }, [initialValue]);
@@ -51,7 +51,15 @@ export const SnapUIDropdown: FunctionComponent<SnapUIDropdownProps> = ({
       flexDirection={FlexDirection.Column}
     >
       {label && <Label htmlFor={name}>{label}</Label>}
-      <Dropdown selectedOption={value} onChange={handleChange} {...props} />
+      <Dropdown
+        data-testid="snaps-dropdown"
+        selectedOption={value}
+        onChange={handleChange}
+        style={{
+          border: '1px solid var(--color-border-muted)',
+        }}
+        {...props}
+      />
       {error && (
         <HelpText severity={HelpTextSeverity.Danger} marginTop={1}>
           {error}
